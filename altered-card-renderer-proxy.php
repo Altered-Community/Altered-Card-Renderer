@@ -37,13 +37,30 @@ if (isset($_GET['img'])) {
   $host = parse_url($url, PHP_URL_HOST);
   if (!in_array($host, $ALLOWED_IMG_DOMAINS)) { http_response_code(403); exit('Forbidden'); }
 
-  $ctx  = stream_context_create(['http' => ['timeout' => 10]]);
-  $body = @file_get_contents($url, false, $ctx);
-  if ($body === false) { http_response_code(502); exit('Upstream error'); }
+  $ch = curl_init($url);
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT        => 15,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_MAXREDIRS      => 3,
+    CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_SSL_VERIFYHOST => 2,
+    CURLOPT_USERAGENT      => 'AlteredDB-Proxy/1.0',
+    CURLOPT_HEADER         => true,
+  ]);
+  $response  = curl_exec($ch);
+  $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+  curl_close($ch);
 
-  // Forward content-type from response headers
+  if ($response === false || $httpCode !== 200) { http_response_code(502); exit('Upstream error'); }
+
+  $rawHeaders = substr($response, 0, $headerSize);
+  $body       = substr($response, $headerSize);
+
+  // Forward content-type from upstream headers
   $ct = 'image/jpeg';
-  foreach ($http_response_header as $h) {
+  foreach (explode("\r\n", $rawHeaders) as $h) {
     if (stripos($h, 'content-type:') === 0) { $ct = trim(substr($h, 13)); break; }
   }
   header("Content-Type: $ct");
@@ -63,10 +80,19 @@ $apiHost = parse_url($apiTpl, PHP_URL_HOST);
 if (!in_array($apiHost, $ALLOWED_API_DOMAINS)) { http_response_code(403); exit('Forbidden'); }
 
 $url = str_replace(['{ref}', '{locale}'], [$ref, $locale], $apiTpl);
-$ctx  = stream_context_create(['http' => ['timeout' => 10]]);
-$body = @file_get_contents($url, false, $ctx);
+$ch = curl_init($url);
+curl_setopt_array($ch, [
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_TIMEOUT        => 10,
+  CURLOPT_SSL_VERIFYPEER => true,
+  CURLOPT_SSL_VERIFYHOST => 2,
+  CURLOPT_USERAGENT      => 'AlteredDB-Proxy/1.0',
+]);
+$body    = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
 
-if ($body === false) { http_response_code(502); exit('Upstream error'); }
+if ($body === false || $httpCode !== 200) { http_response_code(502); exit('Upstream error'); }
 
 $json = json_decode($body, true);
 if ($json !== null) {
