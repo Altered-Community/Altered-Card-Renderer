@@ -31,7 +31,7 @@ The simplest way to display cards on any page. Drop the `<script>` tag, then use
 <altered-card ref="ALT_EOLE_B_OR_109_U_374" locale="en"></altered-card>
 ```
 
-By default the renderer automatically looks for `altered-card-renderer-proxy.php` in the same folder as `altered-card-renderer.js`, and loads card configs from `https://altered-db.com/forge/`. No attributes needed for a standard setup.
+By default the renderer automatically looks for `altered-card-renderer-proxy.php` in the same folder as `altered-card-renderer.js`, and loads card configs from `https://img.altered-db.com/forge/`. No attributes needed for a standard setup.
 
 **Attributes on `<altered-card>`:**
 
@@ -51,7 +51,7 @@ The `RESOURCES` object at the top of the file centralises all configurable paths
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `configBaseUrl` | `https://altered-db.com/forge/` | Root URL for card config files (positions, frames, fonts…). See note below. |
+| `configBaseUrl` | `https://img.altered-db.com/forge/` | Root URL for card config files (positions, frames, fonts…). See note below. |
 | `cardApiUrl` | `https://altered-core-cards-api.toxicity.be/…` | Card data API. `{ref}` and `{locale}` are substituted at runtime. |
 | `proxyUrl` | `null` | Proxy mode: `null` = auto-detect (`altered-card-renderer-proxy.php` next to the script), `false` = no proxy (API called directly, requires CORS), `"https://…"` = explicit URL. |
 | `configIndex` | `config/index.json` | Path to the config index (relative to `configBaseUrl`). |
@@ -61,7 +61,7 @@ The `RESOURCES` object at the top of the file centralises all configurable paths
 | `backgroundUrl` | `""` | URL template used when `useApiBackground` is `false`. Variables: `{ref}`, `{locale}`, `{faction}` (AX, BR…), `{rarity}` (C, R, U, E), `{set}` (CORE, EOLE…), `{id}`. Browse available images at [img.altered-db.com](https://img.altered-db.com). |
 | `backgroundUrlIdTransform` | `null` | Optional regex transforms applied to `{id}` before URL substitution. Array of `[regexPattern, replacement]` pairs applied in order. Used when the asset filenames differ from the card reference. Example: `[["_U_\\d+$", "_U"]]` strips the collector number from unique cards (`ALT_CORE_B_AX_07_U_1698` → `ALT_CORE_B_AX_07_U`). Set to `null` to disable. |
 
-> **Note — `configBaseUrl`:** The default value points to `https://altered-db.com/forge/`, which hosts all the card config files and assets: element positions, frame images, fonts, biome images, set logos, and more. This is **temporary** — the config and assets will be published to the GitHub repository once all card settings are finalised. Until then, the renderer relies on altered-db.com as the config source.
+> **Note — `configBaseUrl`:** The default value points to `https://img.altered-db.com/forge/`, which hosts all the card config files and assets: element positions, frame images, fonts, biome images, set logos, and more. This CDN serves these files with `Access-Control-Allow-Origin: *`, so the renderer can be embedded on any domain without CORS issues.
 
 ### In `altered-card-renderer-proxy.php`
 

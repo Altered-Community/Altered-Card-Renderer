@@ -16,7 +16,7 @@
     // Base URL where the forge files are served.
     // Trailing slash is optional — it is added automatically.
     // Examples: "https://forge.example.com/"  |  "/forge/"  |  ""
-    configBaseUrl: "https://altered-db.com/forge/",
+    configBaseUrl: "https://img.altered-db.com/forge/",
 
     // Path to config/index.json (relative to configBaseUrl)
     configIndex: "config/index.json",
@@ -2011,7 +2011,7 @@
   //
   //   <script src="https://altered-db.com/forge/render-core.js"
   //           data-proxy="https://altered-db.com/forge/standalone/altered-card-renderer-proxy.php"
-  //           data-config-base="https://altered-db.com/forge/"></script>
+  //           data-config-base="https://img.altered-db.com/forge/"></script>
   //
   //   <altered-card ref="ALT_CORE_B_AX_04_U_10"></altered-card>
   //   <altered-card ref="ALT_EOLE_B_OR_109_U_374" locale="fr"></altered-card>
