@@ -334,34 +334,33 @@
   //     Example:  "{R}": { char: "\ue024", size: 0.85 }
   const API_TEXT_TOKENS = {
     // ── Action / keyword icons ──────────────────────────────────
-    "{R}": { char: "\ue024", size: 1.0 },   // Reserve
-    "{J}": { char: "\ue026", size: 0.8 },   // Arrow
-    "{H}": { char: "\ue023", size: 1.0 },   // Hand
-    "{T}": { char: "\ue027", size: 0.8 },   // T icon
-    "{D}": { char: "\ue029", size: 0.8 },   // D icon
-    "{O}": { char: "\ue02d", size: 0.8 },   // O icon
-    "{M}": { char: "\ue025", size: 0.8 },   // M icon
-    "{V}": { char: "\ue037", size: 0.8 },   // V icon
-    "{I}": { char: "\ue02f", size: 0.8 },   // I icon
+    // Size driven by alteredIconsScale / alteredIconsSizes in core.json
+    "{R}": "\ue024",   // Reserve
+    "{J}": "\ue026",   // Arrow
+    "{H}": "\ue023",   // Hand
+    "{T}": "\ue027",   // T icon
+    "{D}": "\ue029",   // D icon
+    "{O}": "\ue02d",   // O icon
+    "{M}": "\ue025",   // M icon
+    "{V}": "\ue037",   // V icon
+    "{I}": "\ue02f",   // I icon
     // Case-insensitive variants (Altered API sometimes uses lowercase)
-    "{r}": { char: "\ue024", size: 0.8 },
-    "{j}": { char: "\ue026", size: 0.8 },
-    "{h}": { char: "\ue023", size: 0.8 },
-    "{t}": { char: "\ue027", size: 0.8 },
-    "{d}": { char: "\ue029", size: 0.8 },
+    "{r}": "\ue024",
+    "{j}": "\ue026",
+    "{h}": "\ue023",
+    "{t}": "\ue027",
+    "{d}": "\ue029",
     // ── Number icons (circled) ──────────────────────────────────
-    "{0}": { char: "\ue022", size: 0.8 },
-    "{1}": { char: "\ue01b", size: 0.8 },
-    "{2}": { char: "\ue01a", size: 0.8 },
-    "{3}": { char: "\ue019", size: 0.8 },
-    "{4}": { char: "\ue020", size: 0.8 },
-    "{5}": { char: "\ue01c", size: 0.8 },
-    "{6}": { char: "\ue01e", size: 0.8 },
-    "{7}": { char: "\ue01d", size: 0.8 },
-    "{8}": { char: "\ue01f", size: 0.8 },
-    "{9}": { char: "\ue021", size: 0.8 },
-    // ── Structural markers ──────────────────────────────────────
-    "[]": "",
+    "{0}": "\u24ea",   // ⓪  — size driven by circledNumberScale in core.json
+    "{1}": "\u2776",   // ❶
+    "{2}": "\u2777",   // ❷
+    "{3}": "\u2778",   // ❸
+    "{4}": "\u2779",   // ❹
+    "{5}": "\u277a",   // ❺
+    "{6}": "\u277b",   // ❻
+    "{7}": "\u277c",   // ❼
+    "{8}": "\u277d",   // ❽
+    "{9}": "\u277e",   // ❾
   };
 
   // ── API TEXT TRANSFORMS ───────────────────────────────────────
@@ -379,12 +378,14 @@
     { pattern: /\(([^)]+)\)/g,   replacement: '(<em>$1</em>)' },
     // [[text]] → bold + underlined (keyword link)
     { pattern: /\[\[(.*?)\]\]/g, replacement: '<strong><u>$1</u></strong>' },
-    // [text]  → bold (keyword)
-    { pattern: /\[(.*?)\]/g,     replacement: '<strong>$1</strong>' },
     // em dash → hyphen
     { pattern: /—/g,             replacement: '-' },
-    // double space → line break \n
+    // double space → line break \n  (must run before [] substitution)
     { pattern: /  /g,            replacement: '\n' },
+    // [] section separator → single space  (after double-space, before [text])
+    { pattern: /\[\]/g,          replacement: ' ' },
+    // [text]  → bold (keyword)
+    { pattern: /\[(.*?)\]/g,     replacement: '<strong>$1</strong>' },
   ];
   // ─────────────────────────────────────────────────────────────
 
@@ -768,10 +769,18 @@
     let out = text;
     for (const [token, val] of Object.entries(API_TEXT_TOKENS)) {
       const char = typeof val === "string" ? val : val.char;
-      const size = typeof val === "object"  ? val.size : null;
-      const replacement = (isRich && size != null)
-        ? `<span style="font-size:${size}em">${char}</span>`
-        : char;
+      let replacement = char;
+      if (isRich && char) {
+        const cp = char.codePointAt(0);
+        if (_isPUA(cp)) {
+          const perScale = (_activeCfg?.alteredIconsSizes?.[_iconLabel(cp)]) ?? 1.0;
+          const scale    = (_activeCfg?.alteredIconsScale ?? 1.0) * perScale;
+          replacement = `<span style="font-size:${scale}em">${char}</span>`;
+        } else if (_isCircledNumber(cp)) {
+          const scale = _activeCfg?.circledNumberScale ?? 1.0;
+          replacement = `<span style="font-size:${scale}em">${char}</span>`;
+        }
+      }
       out = out.split(token).join(replacement);
     }
     return out;
@@ -1329,6 +1338,20 @@
            (cp >= 0x2776 && cp <= 0x2793);
   }
 
+  // Returns the alteredIconsTokens label for a PUA codepoint (e.g. 0xe024 → "R").
+  // Falls back to hex string if not found. Result is cached per config instance.
+  let _iconLabelMap = null, _iconLabelCfg = null;
+  function _iconLabel(cp) {
+    if (_activeCfg !== _iconLabelCfg) {
+      _iconLabelMap = {};
+      _iconLabelCfg = _activeCfg;
+      for (const [label, hex] of Object.entries(_activeCfg?.alteredIconsTokens ?? {})) {
+        if (!label.startsWith("_")) _iconLabelMap[parseInt(hex, 16)] = label;
+      }
+    }
+    return _iconLabelMap[cp] ?? cp.toString(16);
+  }
+
   // Uses _activeCfg set at start of _renderCard()
   function _getCircledScale(text) {
     const base = _activeCfg?.circledNumberScale ?? 1.0;
@@ -1356,7 +1379,7 @@
   // Returns the canvas font string for a token
   function _segFont(isIcon, baseFont, isCircled = false, text = "") {
     if (isIcon) {
-      const key      = text.codePointAt(0)?.toString(16) ?? "";
+      const key      = _iconLabel(text.codePointAt(0));
       const perScale = (_activeCfg?.alteredIconsSizes?.[key]) ?? 1.0;
       const newSize  = Math.round(parseFloat(baseFont) * (_activeCfg?.alteredIconsScale ?? 1.0) * perScale);
       return `${newSize}px "Font Awesome Kit"`;
@@ -1564,7 +1587,7 @@
     }
 
     const _iconScale = (ch) => {
-      const key = ch.codePointAt(0).toString(16);
+      const key = _iconLabel(ch.codePointAt(0));
       return (_activeCfg?.alteredIconsSizes?.[key]) ?? 1.0;
     };
 
