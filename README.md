@@ -171,40 +171,6 @@ See **[altered-card-renderer-readme.html](altered-card-renderer-readme.html)** f
 
 ---
 
-## Contributing frame settings — Editor mode
-
-Card element positions (text placement, font sizes, biome badge coordinates…) need to be tuned individually for each frame type. The **Editor mode** lets community members help with this work directly inside the Forge.
-
-### What it is
-
-Editor mode is a special URL parameter (`?editor`) that unlocks an extra panel in the Forge UI. Once logged in, you can adjust all element positions on any frame type and save your settings to the server. Those settings are then reviewed and discussed — nothing is applied to other users' cards automatically. The maintainer goes through contributions on Discord and decides which values to merge into the main config.
-
-### How to access it
-
-```
-https://altered-db.com/forge/?editor
-```
-
-A **Login** button appears in the navbar. Enter a username and password:
-- If the account doesn't exist yet, it is created automatically.
-- If it already exists, the password is checked against the stored hash.
-
-No email required. The session lasts for the current browser tab only — you'll need to log in again after closing the page.
-
-### Workflow
-
-1. Go to `https://altered-db.com/forge/?editor` and log in.
-2. Select a **faction** and a **frame type** in the Card & Media section.
-3. Use the sliders to adjust element positions, sizes, and values until they match the official layout. Load a reference card image as an overlay (see the Editor section in the panel) to align precisely.
-4. Click **Save** in the navbar to submit your settings for that frame type.
-5. Join the **[Discord](https://discord.gg/UffYvABQ)** — tag `.polluxtroy` — to share what you worked on and discuss whether the values should be merged.
-
-### What happens after you save
-
-Your settings are stored server-side under your account. They are **not applied to other users' cards automatically**. The maintainer reviews contributions, discusses adjustments if needed, and manually integrates the agreed values into the main config files.
-
----
-
 ## Contact
 
 Developed by **PolluxTroy**.  
