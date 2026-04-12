@@ -6,7 +6,7 @@
 //
 // ── Configuration ─────────────────────────────────────────────────
 //
-// The card API URL is configured in RESOURCES.cardApiUrl in altered-card-renderer.js
+// The card API URL is configured in config/core.json (cardApiUrl)
 // and passed here via the ?api= parameter. Only domains listed in
 // $ALLOWED_API_DOMAINS below are accepted (SSRF protection).
 

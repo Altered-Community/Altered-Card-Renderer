@@ -28,8 +28,8 @@
     qrcodeLib: "assets/vendor/qrcodejs/qrcode.min.js",
 
     // URL of the card data API. {ref} and {locale} are substituted at runtime.
-    // Change this if you use a different API endpoint.
-    cardApiUrl: "https://altered-core-cards-api.toxicity.be/api/cards/reference/{ref}?locale={locale}",
+    // Loaded from config/core.json (cardApiUrl). Must be set there — no built-in default.
+    cardApiUrl: "",
 
     // CORS proxy used by the <altered-card> custom element. Three modes:
     //   null        → auto-detect: altered-card-renderer-proxy.php next to this script (default)
@@ -638,6 +638,8 @@
         }
       }
     }
+
+    if (config.cardApiUrl) RESOURCES.cardApiUrl = config.cardApiUrl;
 
     return config;
   }
