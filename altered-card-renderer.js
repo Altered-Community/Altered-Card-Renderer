@@ -1951,25 +1951,33 @@
     }
 
     // ── 4. Set logo ────────────────────────────────────────────
+    // All logos are drawn at the same width (w), so they appear the same size
+    // regardless of their intrinsic aspect ratio. Height is computed from the
+    // ratio automatically. If h is set and the computed height would exceed it,
+    // we clamp to h instead (tall logos won't overflow the reserved area).
     if (state.images.logo && state.settings.setLogo?.visible) {
       const s    = state.settings.setLogo;
       const img  = state.images.logo;
-      const size = (s.size / 100) * W;
-      const x    = (s.x   / 100) * W;
-      const y    = (s.y   / 100) * H;
-      const asp  = img.naturalWidth / img.naturalHeight || 1;
-      const drawW = size;
-      const drawH = size / asp;
-      const offW  = img.naturalWidth  || Math.ceil(drawW);
-      const offH  = img.naturalHeight || Math.ceil(drawH);
+      const cx   = (s.x / 100) * W;
+      const cy   = (s.y / 100) * H;
+      const boxW = ((s.w ?? s.size ?? 5) / 100) * W;
+      const boxH = ((s.h ?? s.size ?? 5) / 100) * H;
+      const imgW = img.naturalWidth  || 1;
+      const imgH = img.naturalHeight || 1;
+      // Fill full width; clamp by height only if the logo would overflow
+      const scaleW = boxW / imgW;
+      const scaleH = boxH / imgH;
+      const scale  = scaleW * imgH > boxH ? scaleH : scaleW;
+      const drawW  = imgW * scale;
+      const drawH  = imgH * scale;
       const off   = document.createElement("canvas");
-      off.width   = offW; off.height = offH;
-      const oCtx = off.getContext("2d");
-      oCtx.drawImage(img, 0, 0, offW, offH);
+      off.width   = imgW; off.height = imgH;
+      const oCtx  = off.getContext("2d");
+      oCtx.drawImage(img, 0, 0, imgW, imgH);
       oCtx.globalCompositeOperation = "source-atop";
       oCtx.fillStyle = s.color || "#ffffff";
-      oCtx.fillRect(0, 0, offW, offH);
-      ctx.drawImage(off, x - drawW/2, y - drawH/2, drawW, drawH);
+      oCtx.fillRect(0, 0, imgW, imgH);
+      ctx.drawImage(off, cx - drawW/2, cy - drawH/2, drawW, drawH);
     }
 
     // ── 5. QR code ─────────────────────────────────────────────
