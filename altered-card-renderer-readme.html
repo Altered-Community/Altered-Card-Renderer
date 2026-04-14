@@ -142,6 +142,129 @@
 
 
 <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>Batch mode &#x2014; <code>FETCH_MODE</code></h2>
+
+<p>
+  By default the renderer makes <strong>one API call per <code>&lt;altered-card&gt;</code> tag</strong>.
+  Setting <code>FETCH_MODE = 2</code> near the top of <code>altered-card-renderer.js</code> switches to
+  <strong>batch mode</strong>: all tags on the page are collected into a single
+  <code>POST /api/cards/batch</code> request, significantly reducing network round-trips when
+  displaying several cards at once.
+</p>
+
+<pre><code><span class="cm">// In altered-card-renderer.js &mdash; near the top:</span>
+<span class="kw">const</span> FETCH_MODE  = <span class="nb">1</span>;   <span class="cm">// 1 = one call per tag (default) | 2 = batch</span>
+<span class="kw">const</span> BATCH_SIZE  = <span class="nb">50</span>;  <span class="cm">// max references per POST request</span>
+<span class="kw">const</span> BATCH_MAX   = <span class="nb">100</span>; <span class="cm">// hard cap — refs beyond this are dropped</span></code></pre>
+
+<h3>How batch mode works</h3>
+<p>
+  When <code>FETCH_MODE = 2</code>, each <code>&lt;altered-card&gt;</code> element registers itself in an
+  internal queue instead of fetching immediately. After a single browser tick
+  (<code>setTimeout(0)</code>) &mdash; enough time for all tags in the page HTML to connect &mdash; the queue is
+  flushed:
+</p>
+<ol>
+  <li>Unique refs are collected and capped at <code>BATCH_MAX</code>. Refs beyond this limit are silently dropped &mdash; their elements remain empty.</li>
+  <li>The capped list is split into chunks of at most <code>BATCH_SIZE</code>.</li>
+  <li>All chunks are sent in parallel as <code>POST /api/cards/batch</code> requests.</li>
+  <li>Responses are merged and each waiting element is rendered with its own data.</li>
+</ol>
+<p>
+  Elements that connect <em>after</em> the flush (e.g. injected dynamically) automatically fall
+  back to individual mode-1 calls.
+</p>
+
+<h3>BATCH_SIZE and BATCH_MAX</h3>
+<table>
+  <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+  <tr><td><code>BATCH_SIZE</code></td><td><code>50</code></td><td>Maximum references per POST. If there are more unique refs, the list is split and requests are fired in parallel.</td></tr>
+  <tr><td><code>BATCH_MAX</code></td><td><code>100</code></td><td>Hard cap on the total number of refs processed. Refs beyond this are silently ignored. Set to <code>Infinity</code> to disable.</td></tr>
+</table>
+
+<div class="box info">
+  Example with defaults: 120 unique cards on a page &rarr; first 100 are processed (warning in console), sent as 2&times;50 parallel requests.
+</div>
+
+<h3>Locale in batch mode</h3>
+<p>
+  Each <code>&lt;altered-card&gt;</code> element still respects its own <code>locale</code> attribute &mdash;
+  cards on the same page can be displayed in different languages even in batch mode.
+  The locale sent in the batch request body is taken from the <strong>first tag on the page that
+  explicitly sets a <code>locale</code> attribute</strong>; if none do, it defaults to <code>en</code>.
+  Because the batch API returns all locales in every response item, this choice does not affect
+  which languages are available &mdash; it is used only for server-side logging / hints.
+</p>
+
+<h3>Proxy support</h3>
+<p>
+  Batch mode works through <code>altered-card-renderer-proxy.php</code> exactly like mode 1.
+  The proxy detects the <code>?batch=1</code> query parameter, forwards the <code>POST</code> body
+  to <code>/api/cards/batch</code> on the upstream API, and returns the JSON array unchanged.
+</p>
+<p>
+  Direct calls (no proxy, <code>data-proxy="false"</code>) are also supported &mdash; the API must then
+  allow <code>POST</code> CORS requests from the browser.
+</p>
+
+<table>
+  <tr><th>Mode</th><th>API calls</th><th>When to use</th></tr>
+  <tr><td><code>FETCH_MODE = 1</code></td><td>1 per tag</td><td>Default. Simple pages, dynamic injection, or APIs without a batch endpoint.</td></tr>
+  <tr><td><code>FETCH_MODE = 2</code></td><td>1 per page</td><td>Pages with multiple <code>&lt;altered-card&gt;</code> tags rendered at load time.</td></tr>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>Per-card overrides &#x2014; <code>cards_data.json</code></h2>
+
+<p>
+  The file <code>config/cards_data.json</code> lets you apply forge overrides to specific cards
+  (or groups of cards) without touching the card API data. Overrides are deep-merged into the
+  card's <code>forge</code> section just before rendering — only the fields you specify are changed.
+</p>
+
+<h3>Key format</h3>
+<table>
+  <tr><th>Key type</th><th>Example</th><th>Matches</th></tr>
+  <tr>
+    <td>Exact reference</td>
+    <td><code>"ALT_CORE_B_AX_04_U_10"</code></td>
+    <td>That one card only</td>
+  </tr>
+  <tr>
+    <td>Prefix wildcard</td>
+    <td><code>"ALT_ALIZE_B_AX_*"</code></td>
+    <td>Any card whose reference starts with <code>ALT_ALIZE_B_AX_</code></td>
+  </tr>
+</table>
+
+<p>
+  When several patterns match the same card they are applied from least specific (shortest prefix)
+  to most specific (exact match), so the most specific entry always wins.
+  Keys starting with <code>_</code> are treated as comments and ignored.
+</p>
+
+<h3>Example</h3>
+<pre><code>{
+  <span class="cm">// Override bgTransform for one exact card:</span>
+  <span class="str">"ALT_CORE_B_AX_04_U_10"</span>: {
+    <span class="str">"bgTransform"</span>: { <span class="str">"zoom"</span>: <span class="nb">145</span>, <span class="str">"x"</span>: <span class="nb">55</span>, <span class="str">"y"</span>: <span class="nb">40</span> }
+  },
+
+  <span class="cm">// Override bgTransform for an entire card group:</span>
+  <span class="str">"ALT_ALIZE_B_AX_*"</span>: {
+    <span class="str">"bgTransform"</span>: { <span class="str">"zoom"</span>: <span class="nb">130</span>, <span class="str">"x"</span>: <span class="nb">50</span>, <span class="str">"y"</span>: <span class="nb">45</span> }
+  }
+}</code></pre>
+
+<h3>Built mode</h3>
+<p>
+  When using <code>build_renderer_for_github.py</code>, the contents of <code>cards_data.json</code>
+  are embedded into the built JS alongside the rest of the config — no separate file is needed at runtime.
+</p>
+
 <h2>External resources configuration</h2>
 
 <p>

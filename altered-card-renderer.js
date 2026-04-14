@@ -77,6 +77,24 @@
   };
 
   // ── API MAPPING ───────────────────────────────────────────────
+  // ── FETCH MODE ───────────────────────────────────────────────────
+  // Controls how <altered-card> elements fetch card data.
+  //   1 → one API call per tag (default)
+  //   2 → one batch API call for all tags on the page (POST /api/cards/batch)
+  const FETCH_MODE = 1;
+
+  // ── BATCH SIZE ───────────────────────────────────────────────────
+  // Maximum number of card references sent in a single batch request (FETCH_MODE 2).
+  // If more unique refs are collected, the list is split into chunks of this size
+  // and one POST is made per chunk (in parallel).
+  const BATCH_SIZE = 50;
+
+  // ── BATCH MAX ────────────────────────────────────────────────────
+  // Hard cap on the total number of unique references processed in batch mode.
+  // Entries beyond this limit are silently dropped — their <altered-card> elements
+  // will remain empty. Set to Infinity to disable the cap.
+  const BATCH_MAX = 50;
+
   // ── DEFAULT COLLECTION ───────────────────────────────────────────
   // Frame collection used when forge.collection is absent from the JSON.
   // Change this if your cards are not from the "official" collection.
@@ -609,6 +627,12 @@
       _cfg         = await _ensureConfig();
       _biomeImages = await _ensureBiomeImages();
 
+      // Apply per-card overrides from cards_data.json (deep-merged into forge).
+      const _cardsOverride = _matchCardsData(apiJson.reference, _cfg.cardsData);
+      if (_cardsOverride) {
+        apiJson = { ...apiJson, forge: _deepMerge(apiJson.forge || {}, _cardsOverride) };
+      }
+
       const cardJson = _apiToCardJson(apiJson, mapping);
       return this.mount(container, cardJson);
     },
@@ -727,7 +751,64 @@
 
     if (config.cardApiUrl) RESOURCES.cardApiUrl = config.cardApiUrl;
 
+    // Load cards_data.json separately — stored as config.cardsData, not merged
+    const cardsFiles = index.cards || [];
+    if (cardsFiles.length) {
+      const cardsResults = await Promise.all(
+        cardsFiles.map(async fname => {
+          const url  = _resolveUrl(`config/${fname}`, base);
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error(`Config ${fname}: HTTP ${resp.status}`);
+          return resp.json();
+        })
+      );
+      config.cardsData = {};
+      for (const part of cardsResults) {
+        for (const [key, val] of Object.entries(part)) {
+          if (!key.startsWith("_")) config.cardsData[key] = val;
+        }
+      }
+    }
+
     return config;
+  }
+
+  // ── Per-card override helpers ─────────────────────────────────
+
+  /** Recursively deep-merge source into target (returns new object). */
+  function _deepMerge(target, source) {
+    const out = Object.assign({}, target);
+    for (const [k, v] of Object.entries(source)) {
+      if (v !== null && typeof v === "object" && !Array.isArray(v) &&
+          out[k] !== null && typeof out[k] === "object" && !Array.isArray(out[k])) {
+        out[k] = _deepMerge(out[k], v);
+      } else {
+        out[k] = v;
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Find all patterns in cardsData matching ref, merge them from least
+   * to most specific, and return the combined override (or null if none).
+   */
+  function _matchCardsData(ref, cardsData) {
+    if (!cardsData || !ref) return null;
+    const matches = [];
+    for (const [pattern, data] of Object.entries(cardsData)) {
+      if (pattern.endsWith("*")) {
+        const prefix = pattern.slice(0, -1);
+        if (ref.startsWith(prefix)) matches.push({ specificity: prefix.length, data });
+      } else if (pattern === ref) {
+        matches.push({ specificity: Infinity, data });
+      }
+    }
+    if (!matches.length) return null;
+    matches.sort((a, b) => a.specificity - b.specificity);
+    let merged = {};
+    for (const { data } of matches) merged = _deepMerge(merged, data);
+    return merged;
   }
 
 
@@ -2171,21 +2252,122 @@
              + 'text-align:center;padding:1rem">' + ref + "<br>" + msg + "</div>";
       }
 
+      // ── Mode 2 — batch queue ──────────────────────────────────────
+      // Entries: { element, ref, locale, collection }
+      // Populated by connectedCallback() when FETCH_MODE === 2.
+      // Flushed once per tick via setTimeout(0) after the last tag connects.
+      const _batchQueue     = [];
+      let   _batchScheduled = false;
+
+      async function _flushBatch() {
+        _batchScheduled = false;
+        const entries = _batchQueue.splice(0);
+        if (!entries.length) return;
+
+        // Locale for the batch request: first tag that explicitly set one, else "en".
+        const batchLocale = entries.find(e => e.element.hasAttribute("locale"))?.locale ?? "en";
+
+        // Unique refs (preserve order), capped at BATCH_MAX then split into chunks of BATCH_SIZE.
+        const allRefs = [...new Set(entries.map(e => e.ref))];
+        if (allRefs.length > BATCH_MAX)
+          console.warn(`[altered-card] ${allRefs.length} unique refs exceed BATCH_MAX (${BATCH_MAX}) — truncating.`);
+        const refs = allRefs.slice(0, BATCH_MAX);
+        const chunks = [];
+        for (let i = 0; i < refs.length; i += BATCH_SIZE) chunks.push(refs.slice(i, i + BATCH_SIZE));
+
+        // Fire all chunks in parallel, collect results into a single map ref → data.
+        const byRef = new Map();
+        try {
+          const fetchChunk = async (chunk) => {
+            let res;
+            if (_proxyBase === false) {
+              const batchUrl = RESOURCES.cardApiUrl.replace(/\/cards.*$/, '/cards/batch');
+              res = await fetch(batchUrl, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body:    JSON.stringify({ references: chunk, locale: batchLocale }),
+              });
+            } else {
+              res = await fetch(
+                _proxyBase + "?batch=1&locale=" + batchLocale
+                           + "&api=" + encodeURIComponent(RESOURCES.cardApiUrl),
+                {
+                  method:  'POST',
+                  headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                  body:    JSON.stringify({ references: chunk }),
+                }
+              );
+            }
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+          };
+
+          const responses = await Promise.all(chunks.map(fetchChunk));
+          for (const results of responses) {
+            if (Array.isArray(results)) {
+              for (const item of results) {
+                if (item?.reference) byRef.set(item.reference, item);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[altered-card] batch fetch failed, falling back to individual calls", err);
+          for (const e of entries) {
+            AlteredCardElement._loadSingle(e.element, e.ref, e.locale, e.collection);
+          }
+          return;
+        }
+
+        // Distribute to each waiting element.
+        for (const e of entries) {
+          const data = byRef.get(e.ref);
+          if (!data) {
+            // Ref missing from batch response — fall back to individual call.
+            AlteredCardElement._loadSingle(e.element, e.ref, e.locale, e.collection);
+            continue;
+          }
+          // Proxy asset URLs.
+          if (_proxyBase !== false && Array.isArray(data.assets))
+            data.assets = data.assets.map(u => u ? _proxyBase + "?img=" + encodeURIComponent(u) : u);
+          // Set forge metadata — lang is per-element, not shared.
+          data.forge = { collection: e.collection, lang: e.locale };
+          AlteredRender.mountFromApi(e.element, data, undefined, { _resolvedProxy: _proxyBase })
+            .catch(err => { e.element.innerHTML = _cardErrHtml(e.ref, "render error"); console.error(err); });
+        }
+      }
+
       class AlteredCardElement extends HTMLElement {
         connectedCallback() {
           const ref = this.getAttribute("ref");
           if (!ref) return;
           const locale     = this.getAttribute("locale")     || "en";
           const collection = this.getAttribute("collection") || DEFAULT_COLLECTION;
-          AlteredRender.init({ configBaseUrl: _cfgBase })
-            .then(() => this._load(ref, locale, collection))
-            .catch(err => { this.innerHTML = _cardErrHtml(ref, "init error"); console.error(err); });
+
+          if (FETCH_MODE === 2) {
+            _batchQueue.push({ element: this, ref, locale, collection });
+            if (!_batchScheduled) {
+              _batchScheduled = true;
+              AlteredRender.init({ configBaseUrl: _cfgBase })
+                .then(() => setTimeout(_flushBatch, 0))
+                .catch(err => {
+                  _batchScheduled = false;
+                  console.error("[altered-card] init error", err);
+                  _batchQueue.splice(0).forEach(e => {
+                    e.element.innerHTML = _cardErrHtml(e.ref, "init error");
+                  });
+                });
+            }
+          } else {
+            AlteredRender.init({ configBaseUrl: _cfgBase })
+              .then(() => AlteredCardElement._loadSingle(this, ref, locale, collection))
+              .catch(err => { this.innerHTML = _cardErrHtml(ref, "init error"); console.error(err); });
+          }
         }
 
-        async _load(ref, locale, collection) {
+        // Mode 1 individual load — also used as fallback in mode 2.
+        static async _loadSingle(element, ref, locale, collection) {
           let url;
           if (_proxyBase === false) {
-            // Direct API call — no proxy (API must allow CORS)
             url = RESOURCES.cardApiUrl
               .replace('{ref}',    encodeURIComponent(ref))
               .replace('{locale}', locale);
@@ -2199,13 +2381,13 @@
             if (!res.ok) throw new Error("HTTP " + res.status);
             data = await res.json();
           } catch {
-            this.innerHTML = _cardErrHtml(ref, "not found");
+            element.innerHTML = _cardErrHtml(ref, "not found");
             return;
           }
           if (_proxyBase !== false && Array.isArray(data.assets))
             data.assets = data.assets.map(u => u ? _proxyBase + "?img=" + encodeURIComponent(u) : u);
-          data.forge = { collection };
-          await AlteredRender.mountFromApi(this, data, undefined, { _resolvedProxy: _proxyBase });
+          data.forge = { collection, lang: locale };
+          await AlteredRender.mountFromApi(element, data, undefined, { _resolvedProxy: _proxyBase });
         }
       }
 

@@ -41,6 +41,8 @@ By default the renderer automatically looks for `altered-card-renderer-proxy.php
 | `locale` | `en` | Language (`en`, `fr`, `es`, `it`, `de`) |
 | `collection` | `official` | Frame collection (`official` or `community`) |
 
+> **Limit:** a maximum of 50 `<altered-card>` elements per page are rendered. Elements beyond this limit are silently ignored.
+
 ---
 
 ## Self-hosting

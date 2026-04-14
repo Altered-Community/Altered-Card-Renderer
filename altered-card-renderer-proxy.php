@@ -31,6 +31,58 @@ $ALLOWED_API_DOMAINS = [
 
 header('Access-Control-Allow-Origin: ' . $CORS_ORIGIN);
 
+// ── Preflight (CORS) ──────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+  header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+  header('Access-Control-Allow-Headers: Content-Type, Accept');
+  http_response_code(204);
+  exit;
+}
+
+// ── Batch card JSON proxy ─────────────────────────────────────
+// Called by the renderer in FETCH_MODE 2.
+// Request: POST ?batch=1&locale=fr&api=https://…
+// Body:    { "references": ["ALT_…", "ALT_…"] }
+if (isset($_GET['batch'])) {
+  $locale = preg_replace('/[^a-z]/', '', $_GET['locale'] ?? 'en');
+  $apiTpl = $_GET['api'] ?? '';
+
+  if (!$apiTpl) { http_response_code(400); exit('Missing api'); }
+
+  $apiHost = parse_url($apiTpl, PHP_URL_HOST);
+  if (!in_array($apiHost, $ALLOWED_API_DOMAINS)) { http_response_code(403); exit('Forbidden'); }
+
+  // Build batch endpoint URL: keep everything up to /cards, append /batch.
+  $batchUrl = preg_replace('#/cards.*$#', '/cards/batch', $apiTpl);
+
+  $rawBody = file_get_contents('php://input');
+  if (!$rawBody) { http_response_code(400); exit('Missing body'); }
+
+  $ch = curl_init($batchUrl);
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => $rawBody,
+    CURLOPT_HTTPHEADER     => [
+      'Content-Type: application/json',
+      'Accept: application/json',
+    ],
+    CURLOPT_TIMEOUT        => 20,
+    CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_SSL_VERIFYHOST => 2,
+    CURLOPT_USERAGENT      => 'AlteredDB-Proxy/1.0',
+  ]);
+  $body     = curl_exec($ch);
+  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  curl_close($ch);
+
+  if ($body === false || $httpCode !== 200) { http_response_code(502); exit('Upstream error'); }
+
+  header('Content-Type: application/json');
+  echo $body;
+  exit;
+}
+
 // ── Image proxy ───────────────────────────────────────────────────
 if (isset($_GET['img'])) {
   $url  = $_GET['img'];
