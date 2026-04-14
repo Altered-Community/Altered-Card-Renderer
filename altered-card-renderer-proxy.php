@@ -17,7 +17,7 @@ $CORS_ORIGIN = '*';
 // Add any CDN or S3 bucket host that serves card images.
 $ALLOWED_IMG_DOMAINS = [
   'altered-prod-eu.s3.amazonaws.com',
-  'img.altered-db.com',
+  'cdn.alteredcore.org',
   'cdn.alteredcore.org',
 ];
 

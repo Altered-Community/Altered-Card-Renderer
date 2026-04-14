@@ -117,7 +117,7 @@
 
 <p>
   By default the renderer looks for <code>altered-card-renderer-proxy.php</code> in the same folder as
-  <code>altered-card-renderer.js</code>, and loads card configs from <code>https://img.altered-db.com/forge/</code>. No attributes
+  <code>altered-card-renderer.js</code>, and loads card configs from <code>https://cdn.alteredcore.org/forge/</code>. No attributes
   needed for a standard setup. Override with <code>data-proxy</code> if your proxy is elsewhere.
 </p>
 
@@ -133,11 +133,11 @@
 <table>
   <tr><th><code>&lt;script&gt;</code> attribute</th><th>Description</th></tr>
   <tr><td><code>data-proxy</code></td><td>Override the proxy. <code>"https://…"</code> = explicit URL. <code>"false"</code> = no proxy, API called directly from the browser (requires the API to allow CORS). Omit to auto-detect <code>altered-card-renderer-proxy.php</code> next to the script.</td></tr>
-  <tr><td><code>data-config-base</code></td><td>Card config root URL. Defaults to <code>https://img.altered-db.com/forge/</code> &#x2014; this CDN hosts all card configuration files (element positions, sizes, fonts, frame rules, biome images, etc.) with <code>Access-Control-Allow-Origin: *</code>.</td></tr>
+  <tr><td><code>data-config-base</code></td><td>Card config root URL. Defaults to <code>https://cdn.alteredcore.org/forge/</code> &#x2014; this CDN hosts all card configuration files (element positions, sizes, fonts, frame rules, biome images, etc.) with <code>Access-Control-Allow-Origin: *</code>.</td></tr>
 </table>
 
 <div class="box warning">
-  The default <code>data-config-base</code> points to <code>https://img.altered-db.com/forge/</code>, which hosts all the card configuration files (element positions, frame rules, fonts, biome images…). This CDN is configured with <code>Access-Control-Allow-Origin: *</code>, so the renderer can be embedded on any domain without CORS issues.
+  The default <code>data-config-base</code> points to <code>https://cdn.alteredcore.org/forge/</code>, which hosts all the card configuration files (element positions, frame rules, fonts, biome images…). This CDN is configured with <code>Access-Control-Allow-Origin: *</code>, so the renderer can be embedded on any domain without CORS issues.
 </div>
 
 
@@ -297,14 +297,14 @@
 <span class="kw">const</span> CARD_API_URL = <span class="str">""</span>;
 
 <span class="kw">const</span> RESOURCES = {
-  configBaseUrl:    <span class="str">"https://img.altered-db.com/forge/"</span>,       <span class="cm">// forge base URL (CDN, CORS: *)</span>
+  configBaseUrl:    <span class="str">"https://cdn.alteredcore.org/forge/"</span>,       <span class="cm">// forge base URL (CDN, CORS: *)</span>
   configIndex:      <span class="str">"config/index.json"</span>,                       <span class="cm">// config manifest</span>
   alteredIconsCss:  <span class="str">"assets/fonts/alteredicons.css"</span>,             <span class="cm">// Altered icon font</span>
   qrcodeLib:        <span class="str">"assets/vendor/qrcodejs/qrcode.min.js"</span>,    <span class="cm">// QR code library</span>
   cardApiUrl:       CARD_API_URL,                                <span class="cm">// resolved from above</span>
   proxyUrl:         <span class="nb">null</span>,                                       <span class="cm">// null | false | "https://…"</span>
   useApiBackground: <span class="nb">true</span>,                                       <span class="cm">// true = API image, false = custom URL</span>
-  backgroundUrl:    <span class="str">""</span>,    <span class="cm">// template: {ref} {locale} {faction} {rarity} {set} {id} — see img.altered-db.com</span>
+  backgroundUrl:    <span class="str">""</span>,    <span class="cm">// template: {ref} {locale} {faction} {rarity} {set} {id} — see cdn.alteredcore.org</span>
   backgroundUrlIdTransform: <span class="nb">null</span>, <span class="cm">// [[regexPattern, replacement], …] applied to {id} before URL substitution — null to disable</span>
                             <span class="cm">// e.g. [["_U_\\d+$", "_U"]] → ALT_CORE_B_AX_07_U_1698 becomes ALT_CORE_B_AX_07_U</span>
   embeddedConfig:   <span class="nb">null</span>,  <span class="cm">// set by build script — when non-null, takes full priority over configBaseUrl</span>

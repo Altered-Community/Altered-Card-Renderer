@@ -31,7 +31,7 @@ The simplest way to display cards on any page. Drop the `<script>` tag, then use
 <altered-card ref="ALT_EOLE_B_OR_109_U_374" locale="en"></altered-card>
 ```
 
-By default the renderer automatically looks for `altered-card-renderer-proxy.php` in the same folder as `altered-card-renderer.js`, and loads card configs from `https://img.altered-db.com/forge/`. No attributes needed for a standard setup.
+By default the renderer automatically looks for `altered-card-renderer-proxy.php` in the same folder as `altered-card-renderer.js`, and loads card configs from `https://cdn.alteredcore.org/forge/`. No attributes needed for a standard setup.
 
 **Attributes on `<altered-card>`:**
 
@@ -49,7 +49,7 @@ By default the renderer automatically looks for `altered-card-renderer-proxy.php
 
 ### What you actually need to host
 
-The renderer itself (`altered-card-renderer.js`) is a single vanilla JS file — no build step, no npm, no framework. It fetches card config files and assets from `https://img.altered-db.com/forge/` automatically (CDN, CORS open). **You do not need to host the config or assets yourself.**
+The renderer itself (`altered-card-renderer.js`) is a single vanilla JS file — no build step, no npm, no framework. It fetches card config files and assets from `https://cdn.alteredcore.org/forge/` automatically (CDN, CORS open). **You do not need to host the config or assets yourself.**
 
 The only reason to run a server at all is the **PHP proxy** — it handles two things the browser can't do directly:
 - Fetch card data from the Altered API (CORS-restricted)
@@ -126,19 +126,19 @@ There is also a top-level variable above `RESOURCES` for the API URL:
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `configBaseUrl` | `""` *(built)* / `https://img.altered-db.com/forge/` *(source)* | Root URL for config files and assets. In the built version the config is embedded and assets are local, so this is `""`. See note below. |
+| `configBaseUrl` | `""` *(built)* / `https://cdn.alteredcore.org/forge/` *(source)* | Root URL for config files and assets. In the built version the config is embedded and assets are local, so this is `""`. See note below. |
 | `proxyUrl` | `null` | Proxy mode: `null` = auto-detect (`altered-card-renderer-proxy.php` next to the script), `false` = no proxy (API called directly, requires CORS), `"https://…"` = explicit URL. |
 | `configIndex` | `config/index.json` | Path to the config index (relative to `configBaseUrl`). Unused when `embeddedConfig` is set. |
 | `alteredIconsCss` | `assets/fonts/alteredicons.css` | Path to the Altered icon font (relative to `configBaseUrl`). |
 | `qrcodeLib` | `assets/vendor/qrcodejs/qrcode.min.js` | Path to QRCode.js (relative to `configBaseUrl`, or absolute URL). |
 | `useApiBackground` | `true` | `true` = use the image URL returned by the API. `false` = use a custom URL template (see `backgroundUrl`). |
-| `backgroundUrl` | `""` | URL template used when `useApiBackground` is `false`. Variables: `{ref}`, `{locale}`, `{faction}` (AX, BR…), `{rarity}` (C, R, U, E), `{set}` (CORE, EOLE…), `{id}`. Browse available images at [img.altered-db.com](https://img.altered-db.com). |
+| `backgroundUrl` | `""` | URL template used when `useApiBackground` is `false`. Variables: `{ref}`, `{locale}`, `{faction}` (AX, BR…), `{rarity}` (C, R, U, E), `{set}` (CORE, EOLE…), `{id}`. Browse available images at [cdn.alteredcore.org](https://cdn.alteredcore.org). |
 | `backgroundUrlIdTransform` | `null` | Optional regex transforms applied to `{id}` before URL substitution. Array of `[regexPattern, replacement]` pairs applied in order. Example: `[["_U_\\d+$", "_U"]]` strips the collector number from unique cards (`ALT_CORE_B_AX_07_U_1698` → `ALT_CORE_B_AX_07_U`). Set to `null` to disable. |
 | `embeddedConfig` | `null` | When non-null, **takes full priority** — no config files are fetched. Set by the build script. To force external JSON files instead, pass `embeddedConfig: null` explicitly to `AlteredRender.init()`. |
 
 > **Note — config priority:** `embeddedConfig` always takes precedence over `configBaseUrl`. In the built version, config is embedded and no JSON files are fetched. To override with external config files at runtime, pass `{ embeddedConfig: null, configBaseUrl: "https://…" }` to `AlteredRender.init()`.
 
-> **Note — `configBaseUrl`:** In the built version, `configBaseUrl` is `""` because assets are served from the same folder. If you load the renderer from jsDelivr or the source file directly, `configBaseUrl` defaults to `https://img.altered-db.com/forge/` — a CDN with `Access-Control-Allow-Origin: *`.
+> **Note — `configBaseUrl`:** In the built version, `configBaseUrl` is `""` because assets are served from the same folder. If you load the renderer from jsDelivr or the source file directly, `configBaseUrl` defaults to `https://cdn.alteredcore.org/forge/` — a CDN with `Access-Control-Allow-Origin: *`.
 
 ### In `altered-card-renderer-proxy.php`
 

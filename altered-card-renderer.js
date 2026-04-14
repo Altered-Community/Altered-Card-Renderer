@@ -22,7 +22,7 @@
     // Base URL where the forge files are served.
     // Trailing slash is optional — it is added automatically.
     // Examples: "https://forge.example.com/"  |  "/forge/"  |  ""
-    configBaseUrl: "https://img.altered-db.com/forge/",
+    configBaseUrl: "https://cdn.alteredcore.org/forge/",
 
     // Path to config/index.json (relative to configBaseUrl)
     configIndex: "config/index.json",
@@ -49,7 +49,7 @@
     useApiBackground: false,
 
     // Custom background URL template — used only when useApiBackground is false.
-    // Browse available images: https://img.altered-db.com
+    // Browse available images: https://cdn.alteredcore.org
     // Available variables (substituted at runtime from the API response):
     //   {ref}     → full card reference  (e.g. ALT_CORE_B_AX_04_U_10)
     //   {locale}  → language code        (e.g. en, fr)
@@ -58,7 +58,7 @@
     //   {set}     → set reference        (e.g. CORE, EOLE, DUSTER)
     //   {id}      → card unique ID from the API
     // Example: "https://cdn.example.com/cards/{faction}/{rarity}/{ref}_{locale}.webp"
-    backgroundUrl: "https://img.altered-db.com/cards/assets/{set}/{id}.webp",
+    backgroundUrl: "https://cdn.alteredcore.org/cards/assets/{set}/{id}.webp",
 
     // Optional transforms applied to {id} before substitution in backgroundUrl.
     // Format: array of [regexPattern, replacement] pairs — applied in order.
@@ -2218,7 +2218,7 @@
   //
   //   <script src="https://altered-db.com/forge/render-core.js"
   //           data-proxy="https://altered-db.com/forge/standalone/altered-card-renderer-proxy.php"
-  //           data-config-base="https://img.altered-db.com/forge/"></script>
+  //           data-config-base="https://cdn.alteredcore.org/forge/"></script>
   //
   //   <altered-card ref="ALT_CORE_B_AX_04_U_10"></altered-card>
   //   <altered-card ref="ALT_EOLE_B_OR_109_U_374" locale="fr"></altered-card>
