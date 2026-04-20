@@ -219,6 +219,8 @@
   function _type(d)    { return d.cardType?.reference ?? ""; }
   // Returns true if any entry in cardSubTypes has the given reference (e.g. "EXPEDITION").
   function _subtype(d, ref) { return (d.cardSubTypes ?? []).some(s => s.reference === ref); }
+  // Expedition permanent: either type=PERMANENT + subtype=EXPEDITION, or type=EXPEDITION_PERMANENT.
+  function _isExpPerm(d) { return (_type(d) === "PERMANENT" && _subtype(d, "EXPEDITION")) || _type(d) === "EXPEDITION_PERMANENT"; }
 
   const FRAME_AUTO_SELECT = {
     // ── COMMON ────────────────────────────────────────────────────────
@@ -232,10 +234,10 @@
       // HERO — single variant
       { frameType: "hero_c_1",    test: (d)    => _type(d) === "HERO" },
       // EXPEDITION PERMANENT
-      { frameType: "expperm_c_1", test: (d, l) => _type(d) === "PERMANENT" && _subtype(d, "EXPEDITION") &&  _eff2(d) && _eff1(d, l) <  200 },
-      { frameType: "expperm_c_2", test: (d, l) => _type(d) === "PERMANENT" && _subtype(d, "EXPEDITION") &&  _eff2(d) && _eff1(d, l) >= 200 },
-      { frameType: "expperm_c_3", test: (d, l) => _type(d) === "PERMANENT" && _subtype(d, "EXPEDITION") && !_eff2(d) && _eff1(d, l) <  200 },
-      { frameType: "expperm_c_4", test: (d, l) => _type(d) === "PERMANENT" && _subtype(d, "EXPEDITION") && !_eff2(d) && _eff1(d, l) >= 200 },
+      { frameType: "expperm_c_1", test: (d, l) => _isExpPerm(d) &&  _eff2(d) && _eff1(d, l) <  200 },
+      { frameType: "expperm_c_2", test: (d, l) => _isExpPerm(d) &&  _eff2(d) && _eff1(d, l) >= 200 },
+      { frameType: "expperm_c_3", test: (d, l) => _isExpPerm(d) && !_eff2(d) && _eff1(d, l) <  200 },
+      { frameType: "expperm_c_4", test: (d, l) => _isExpPerm(d) && !_eff2(d) && _eff1(d, l) >= 200 },
       // PERMANENT
       { frameType: "perm_c_1",    test: (d, l) => _type(d) === "PERMANENT" &&  _eff2(d) && _eff1(d, l) <  200 },
       { frameType: "perm_c_2",    test: (d, l) => _type(d) === "PERMANENT" &&  _eff2(d) && _eff1(d, l) >= 200 },
