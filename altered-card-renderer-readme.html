@@ -278,7 +278,9 @@ originalParent.<span class="fn">insertBefore</span>(cardEl, placeholder);</code>
 
 <p>
   While the card images are loading, the renderer draws a placeholder on the canvas.
-  A text label is drawn on top — configurable via four constants near the top of
+  Once loading is complete, the placeholder is always cleared — even if no background
+  image was found (the canvas is left with the plain placeholder background, no text).
+  A text label is drawn on top during loading — configurable via four constants near the top of
   <code>altered-card-renderer.js</code>:
 </p>
 
@@ -532,10 +534,10 @@ originalParent.<span class="fn">insertBefore</span>(cardEl, placeholder);</code>
   <span class="str">"COMMON"</span>: [
     { <span class="fn">frameType</span>: <span class="str">"tok_c_1"</span>,     <span class="fn">test</span>: (d)    =&gt; <span class="fn">_type</span>(d) === <span class="str">"TOKEN"</span> },
     { <span class="fn">frameType</span>: <span class="str">"hero_c_1"</span>,    <span class="fn">test</span>: (d)    =&gt; <span class="fn">_type</span>(d) === <span class="str">"HERO"</span> },
-    { <span class="fn">frameType</span>: <span class="str">"expperm_c_1"</span>, <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_type</span>(d) === <span class="str">"PERMANENT"</span> &amp;&amp; <span class="fn">_subtype</span>(d, <span class="str">"EXPEDITION"</span>) &amp;&amp;  <span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &lt;  <span class="nb">200</span> },
-    { <span class="fn">frameType</span>: <span class="str">"expperm_c_2"</span>, <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_type</span>(d) === <span class="str">"PERMANENT"</span> &amp;&amp; <span class="fn">_subtype</span>(d, <span class="str">"EXPEDITION"</span>) &amp;&amp;  <span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &gt;= <span class="nb">200</span> },
-    { <span class="fn">frameType</span>: <span class="str">"expperm_c_3"</span>, <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_type</span>(d) === <span class="str">"PERMANENT"</span> &amp;&amp; <span class="fn">_subtype</span>(d, <span class="str">"EXPEDITION"</span>) &amp;&amp; !<span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &lt;  <span class="nb">200</span> },
-    { <span class="fn">frameType</span>: <span class="str">"expperm_c_4"</span>, <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_type</span>(d) === <span class="str">"PERMANENT"</span> &amp;&amp; <span class="fn">_subtype</span>(d, <span class="str">"EXPEDITION"</span>) &amp;&amp; !<span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &gt;= <span class="nb">200</span> },
+    { <span class="fn">frameType</span>: <span class="str">"expperm_c_1"</span>, <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_isExpPerm</span>(d) &amp;&amp;  <span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &lt;  <span class="nb">200</span> },
+    { <span class="fn">frameType</span>: <span class="str">"expperm_c_2"</span>, <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_isExpPerm</span>(d) &amp;&amp;  <span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &gt;= <span class="nb">200</span> },
+    { <span class="fn">frameType</span>: <span class="str">"expperm_c_3"</span>, <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_isExpPerm</span>(d) &amp;&amp; !<span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &lt;  <span class="nb">200</span> },
+    { <span class="fn">frameType</span>: <span class="str">"expperm_c_4"</span>, <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_isExpPerm</span>(d) &amp;&amp; !<span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &gt;= <span class="nb">200</span> },
     { <span class="fn">frameType</span>: <span class="str">"perm_c_1"</span>,    <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_type</span>(d) === <span class="str">"PERMANENT"</span> &amp;&amp;  <span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &lt;  <span class="nb">200</span> },
     { <span class="fn">frameType</span>: <span class="str">"perm_c_2"</span>,    <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_type</span>(d) === <span class="str">"PERMANENT"</span> &amp;&amp;  <span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &gt;= <span class="nb">200</span> },
     { <span class="fn">frameType</span>: <span class="str">"perm_c_3"</span>,    <span class="fn">test</span>: (d, l) =&gt; <span class="fn">_type</span>(d) === <span class="str">"PERMANENT"</span> &amp;&amp; !<span class="fn">_eff2</span>(d) &amp;&amp; <span class="fn">_eff1</span>(d, l) &lt;  <span class="nb">200</span> },
@@ -560,11 +562,12 @@ originalParent.<span class="fn">insertBefore</span>(cardEl, placeholder);</code>
 };</code></pre>
 
 <div class="box info">
-  Four helper functions are available inside <code>test()</code>:<br><br>
+  Five helper functions are available inside <code>test()</code>:<br><br>
   <code>_eff1(d, lang)</code> — visible character count of the main effect text (API tokens and markup stripped).<br>
   <code>_eff2(d)</code> — <code>true</code> if the card has a discard / echo effect.<br>
   <code>_type(d)</code> — <code>cardType.reference</code> string, e.g. <code>"CHARACTER"</code>, <code>"PERMANENT"</code>, <code>"SPELL"</code>, <code>"TOKEN"</code>, <code>"HERO"</code>.<br>
-  <code>_subtype(d, ref)</code> — <code>true</code> if any entry in <code>cardSubTypes[]</code> has the given <code>reference</code>, e.g. <code>"EXPEDITION"</code>.<br><br>
+  <code>_subtype(d, ref)</code> — <code>true</code> if any entry in <code>cardSubTypes[]</code> has the given <code>reference</code>, e.g. <code>"EXPEDITION"</code>.<br>
+  <code>_isExpPerm(d)</code> — <code>true</code> if <code>type=PERMANENT</code> + <code>subtype=EXPEDITION</code>, <strong>or</strong> <code>type=EXPEDITION_PERMANENT</code> directly.<br><br>
   The 200-character threshold and all frame IDs are fully configurable directly in the block.
   If no rule matches, the renderer falls back to the <code>defaultFrame</code> from <code>core.json</code>.
 </div>

@@ -13,7 +13,7 @@
   // URL of the card data API. {ref} and {locale} are substituted at runtime.
   // Overridden at build time by build_renderer_for_github.py (value from config/core.json).
   // Can also be set via config/core.json > cardApiUrl at runtime (non-embedded mode).
-  const CARD_API_URL = "https://altered-core-cards-api.toxicity.be/api/cards/reference/{ref}?locale={locale}";
+  const CARD_API_URL = "https://cards.alteredcore.org/api/cards/reference/{ref}?locale={locale}";
 
   // ── EXTERNAL RESOURCES ────────────────────────────────────────
   // Edit these paths to match your deployment.
@@ -41,7 +41,7 @@
     //   false       → no proxy: cardApiUrl is called directly from the browser (API must allow CORS)
     //   "https://…" → explicit proxy URL
     // Can also be overridden per-page with data-proxy="false" or data-proxy="https://…" on the <script> tag.
-    proxyUrl: null,
+    proxyUrl: false,
 
     // Background image source. Two modes:
     //   true  → use the image URL returned by the card API (default)
@@ -196,9 +196,10 @@
   // Rules are evaluated in order — the first rule whose test() returns true wins.
   // If no rule matches, the renderer falls back to the defaultFrame from core.json.
   //
-  // Two helper functions are available inside test():
-  //   _eff1(d, lang) → length (chars) of the main effect text
-  //   _eff2(d)       → true if the card has a discard/echo effect, false otherwise
+  // Three helper functions are available inside test():
+  //   _eff1(d, lang)  → length (chars) of the main effect text
+  //   _eff2(d)        → true if the card has a discard/echo effect, false otherwise
+  //   _isExpPerm(d)   → true if type=PERMANENT+subtype=EXPEDITION, or type=EXPEDITION_PERMANENT
   //
   // The rarity key must match cardRarity.reference from the API JSON
   // (e.g. "UNIQUE", "COMMON", "RARE").
@@ -2005,7 +2006,7 @@
         ctx.drawImage(img, dx, dy, dw, dh);
       }
     } else {
-      _drawPlaceholderBg(ctx, W, H, state._ref);
+      _drawCardBg(ctx, W, H);
     }
 
     // ── 1b. Black inset border for blackBleed frames ───────────

@@ -18,7 +18,6 @@ $CORS_ORIGIN = '*';
 $ALLOWED_IMG_DOMAINS = [
   'altered-prod-eu.s3.amazonaws.com',
   'cdn.alteredcore.org',
-  'cdn.alteredcore.org',
 ];
 
 // Allowed card API domains (SSRF protection).
